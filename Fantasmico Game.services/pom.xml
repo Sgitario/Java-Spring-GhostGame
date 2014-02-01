@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.jcarvajal</groupId>
+  <artifactId>gameframework.services</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Services</name>
+  <properties>
+  		<gameframework.version>0.0.1-SNAPSHOT</gameframework.version>
+  
+  		<!-- Spring -->
+		<spring-framework.version>3.2.3.RELEASE</spring-framework.version>
+		
+		<!-- junit -->
+		<junit.version>4.10</junit.version>
+		
+		<!-- mockito -->
+		<mockito.version>1.8.4</mockito.version>
+		
+		<!-- Profiling -->
+		<perf4j.version>0.9.16</perf4j.version>
+  
+  </properties>
+  
+  <dependencies>
+  		<!-- GameFramework -->
+		<dependency>
+			<groupId>com.jcarvajal</groupId>
+			<artifactId>gameframework.transversal</artifactId>
+			<version>${gameframework.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.jcarvajal</groupId>
+			<artifactId>gameframework.infrastructure</artifactId>
+			<version>${gameframework.version}</version>
+			<scope>provided</scope>
+		</dependency>
+  
+  		<!-- Spring Core -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>${spring-framework.version}</version>
+		</dependency>
+		
+		<!-- JUnit -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- Mockito -->
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>${mockito.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- Profiling -->
+		<dependency>
+			<groupId>org.perf4j</groupId>
+			<artifactId>perf4j</artifactId>
+			<version>${perf4j.version}</version>
+		</dependency>
+  
+  </dependencies>
+</project>

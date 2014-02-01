@@ -1,0 +1,116 @@
+html, body {
+	width: 100%;
+	height: 100%;
+	min-width: 200px;
+	min-height: 448px;
+	background: url(../images/background.jpg) no-repeat center center;
+}
+
+body > header {
+	width: 100%;
+	margin: 0 auto;
+	text-align: center;
+	height: 80px;
+	line-height: 110px;
+}
+
+.contentBlock {
+	width: 100%;
+	margin: 0 auto;
+	text-align: center;
+	height: 80px;
+	text-decoration: uppercase;
+}
+
+#userWinsMessage {
+	color: green;
+	font-size: 300%;
+	line-height: 110px;
+	font-weight: bold;
+}
+
+#computerWinsMessage {
+	color: #CE234B;
+	font-size: 300%;
+	line-height: 110px;
+	font-weight: bold;
+}
+
+.content {
+	height: 200px;
+	position: relative;
+}
+
+.dynamic {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+#letters{
+	font-size: 235%;
+}
+
+#inputLetter {
+	background: url(../images/template.png) no-repeat center center;
+	width: 55px;
+	height: 61px;
+}
+
+#inputLetter > input {
+	border: 0px solid #000;
+	font-size: 200%;
+	color: #000;
+	width: 100%;
+	height: 100%;
+	background: transparent;
+	padding: 0 18px;
+}
+
+.button {
+	border: 8px solid #37768d;
+	padding: 8px 0;
+	text-align: center; 
+	-webkit-border-radius: 20px;
+	-moz-border-radius: 20px;
+	border-radius: 20px;
+	-webkit-box-shadow: #666 0px 2px 3px;
+	-moz-box-shadow: #666 0px 2px 3px;
+	box-shadow: #666 0px 2px 3px;
+	background: #ffffff;
+    font-size: 150%;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    width: 200px;
+    color: #ce234b;
+    font-family: Helvetica;
+    cursor: pointer;
+}
+
+.button:hover {
+	background: #fff799;
+	border: 8px solid #ffffff;
+}
+
+
+@media screen and (max-width: 268px) {
+	body > header > img
+	{
+		width: 180px;
+	}
+	
+	.button {
+		font-size: 120%;
+		width: 150px;
+	}
+	
+	#userWinsMessage, #computerWinsMessage{
+		font-size: 120%;
+		line-height: 30px;
+	}
+	
+	#letters {
+		font-size: 120%;
+	}
+}
