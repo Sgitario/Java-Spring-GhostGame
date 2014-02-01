@@ -1,46 +1,15 @@
-# Directories #
-/build/
-/bin/
-target/
+.metadata/
+.settings/
 RemoteSystemsTempFiles/
- 
-# OS Files #
-.DS_Store
- 
-*.class
+bin/
+target/
  
 # Package Files #
+*.class
 *.jar
 *.war
 *.ear
 *.db
- 
-######################
-# Windows
-######################
- 
-# Windows image file caches
-Thumbs.db 
- 
-# Folder config file
-Desktop.ini
- 
- 
-######################
-# Eclipse
-######################
- 
-*.pydevproject
-.project
-.metadata
-bin/**
-tmp/**
-tmp/**/*
-*.tmp
-*.bak
-*.swp
-*~.nib
-local.properties
 *.launch
-.classpath
-.settings/
+*.classpath
+*.project
