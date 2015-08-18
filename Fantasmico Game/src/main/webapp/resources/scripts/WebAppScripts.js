@@ -46,7 +46,7 @@ function AppViewModel() {
      */
     this.startGame = function() {
     	viewModel.string("");
-    	viewModel.finished(false);
+    	viewModel.finished(true);
     	viewModel.winner("");
     	
     	var url = CONTEXT_ROOT + "/ghost/startGame";
@@ -59,8 +59,8 @@ function AppViewModel() {
     		contentType: "application/json",
     		dataType: "json",
     		success: function(response) {
-    			if (viewModel.error) {
-    				alert(viewModel.error);
+    			if (response.error) {
+    				alert(response.error);
     			} else {    				
     				viewModel.token = response.token;
     				

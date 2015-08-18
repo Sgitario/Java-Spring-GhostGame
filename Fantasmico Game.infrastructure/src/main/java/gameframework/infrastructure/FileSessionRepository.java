@@ -1,7 +1,6 @@
 package gameframework.infrastructure;
 
 import gameframework.infrastructure.interfaces.ISessionRepository;
-import gameframework.transversal.logging.GameLogger;
 import gameframework.transversal.models.SessionBean;
 import gameframework.transversal.utils.IOUtils;
 
@@ -11,241 +10,215 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
 
 /**
  * The information to be persisted a simple file storage.
  * 
  * @author José Carvajal
  */
-public class FileSessionRepository implements ISessionRepository
-{
-    private static final String FILE_SESSION_FILE_EXTENSION = ".tmp";
+public class FileSessionRepository implements ISessionRepository {
+	private static final String FILE_SESSION_FILE_EXTENSION = ".tmp";
+	private static final Logger LOG = Logger
+			.getLogger(FileSessionRepository.class);
 
-    private final int hours;
+	private final int hours;
 
-    /**
-     * Initializes a new instance of the FileSessionRepository class.
-     * 
-     * @param hours from now whereas a session is considered as expired.
-     */
-    public FileSessionRepository(int hours)
-    {
-        this.hours = hours;
-    }
+	/**
+	 * Initializes a new instance of the FileSessionRepository class.
+	 * 
+	 * @param hours
+	 *            from now whereas a session is considered as expired.
+	 */
+	public FileSessionRepository(int hours) {
+		this.hours = hours;
+	}
 
-    /**
-     * @return Hours when a session is active.
-     */
-    public int getHours()
-    {
-        return hours;
-    }
+	/**
+	 * @return Hours when a session is active.
+	 */
+	public int getHours() {
+		return hours;
+	}
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.infrastructure.interfaces.ISessionRepository#storeSession(java.lang.String, java.util.Map)
-     */
-    public boolean storeSession(SessionBean session)
-    {
-        List<SessionBean> sessions = this.getSessions(session.getGameName());
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.infrastructure.interfaces.ISessionRepository#storeSession(java.lang.String,
+	 *      java.util.Map)
+	 */
+	public boolean storeSession(SessionBean session) {
+		Set<SessionBean> sessions = this.getSessions(session.getGameName());
 
-        if (sessions == null) {
-            sessions = new ArrayList<SessionBean>();
-        }
+		if (sessions == null) {
+			sessions = new LinkedHashSet<SessionBean>();
+		}
 
-        sessions.add(session);
+		sessions.add(session);
 
-        return this.saveSessions(session.getGameName(), sessions);
-    }
+		return this.saveSessions(session.getGameName(), sessions);
+	}
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.infrastructure.interfaces.ISessionRepository#retrieveSession(java.lang.String)
-     */
-    public SessionBean retrieveSession(String game, String token)
-    {
-        SessionBean session = null;
-        List<SessionBean> sessions = this.getSessions(game);
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.infrastructure.interfaces.ISessionRepository#retrieveSession(java.lang.String)
+	 */
+	public SessionBean retrieveSession(String game, String token) {
+		SessionBean session = null;
+		Set<SessionBean> sessions = this.getSessions(game);
 
-        if (sessions != null) {
-            int index = 0;
-            boolean found = false;
+		if (sessions != null) {
+			for (SessionBean current : sessions) {
+				if (current.getToken() != null
+						&& current.getToken().equals(token)) {
+					session = current;
 
-            while (index < sessions.size() && !found) {
-                SessionBean current = sessions.get(index);
+					break;
+				}
+			}
+		}
 
-                if (current.getToken() != null && current.getToken().equals(token)) {
-                    session = current;
+		return session;
+	}
 
-                    found = true;
-                }
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.infrastructure.interfaces.ISessionRepository#deleteSession(java.lang.String)
+	 */
+	public boolean deleteSession(String game, String token) {
+		SessionBean sessionToRemove = new SessionBean();
+		sessionToRemove.setGameName(game);
+		sessionToRemove.setToken(token);
+		
+		Set<SessionBean> sessions = this.getSessions(game);
+		
+		boolean deleted = sessions.remove(sessionToRemove);
+		this.saveSessions(game, sessions);
 
-                index++;
-            }
-        }
+		return deleted;
+	}
 
-        return session;
-    }
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.infrastructure.interfaces.ISessionRepository#resetSessions
+	 */
+	public synchronized void resetSessions(String game) {
+		File file = new File(this.getFileNameForGame(game));
+		if (file.exists()) {
+			file.delete();
+		}
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.infrastructure.interfaces.ISessionRepository#deleteSession(java.lang.String)
-     */
-    public boolean deleteSession(String game, String token)
-    {
-        int indexToRemove = -1;
-        List<SessionBean> sessions = this.getSessions(game);
+		LOG.debug(String.format("All sessions were reset."));
+	}
 
-        if (sessions != null) {
-            int index = 0;
-            boolean found = false;
+	/**
+	 * @return Retrieve all sessions stored in file.
+	 */
+	@SuppressWarnings("unchecked")
+	private synchronized Set<SessionBean> getSessions(String game) {
+		Set<SessionBean> sessions = null;
+		File file = new File(this.getFileNameForGame(game));
+		if (file.exists()) {
 
-            while (index < sessions.size() && !found) {
-                SessionBean current = sessions.get(index);
+			ObjectInputStream in = null;
+			FileInputStream fileIn = null;
+			try {
+				fileIn = new FileInputStream(file);
+				in = new ObjectInputStream(fileIn);
+				sessions = (Set<SessionBean>) in.readObject();
+			} catch (Exception ex) {
+				LOG.error("Error retrieving sessions", ex);
+			} finally {
+				IOUtils.closeInputStream(in);
+				IOUtils.closeInputStream(fileIn);
+			}
 
-                if (current.getToken() != null && current.getToken().equals(token)) {
-                    indexToRemove = index;
+			this.updateExpiredSessions(game, sessions);
+		}
 
-                    found = true;
-                }
+		return sessions;
+	}
 
-                index++;
-            }
+	/**
+	 * Method to check and update expired sessions.
+	 * 
+	 * @param sessions
+	 */
+	private void updateExpiredSessions(String game, Set<SessionBean> sessions) {
+		if (sessions != null) {
+			// Date comparison
+			Calendar calendar = new GregorianCalendar();
+			calendar.add(Calendar.HOUR, (-1) * this.hours);
+			Date now = calendar.getTime();
 
-            if (found) {
-                sessions.remove(indexToRemove);
+			Set<SessionBean> expired = new LinkedHashSet<SessionBean>();
 
-                this.saveSessions(game, sessions);
+			for (SessionBean session : sessions) {
+				if (session.getStartedAt() == null
+						|| session.getStartedAt().before(now)) {
+					expired.add(session);
+				}
+			}
 
-                GameLogger.debug(String.format("Session deleted: %s.", token));
-            }
-        }
+			// Delete
+			for (SessionBean session : expired) {
+				sessions.remove(session);
 
-        return indexToRemove >= 0;
-    }
+				LOG.debug(String.format("Session expired: %s.",
+						session.toString()));
+			}
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.infrastructure.interfaces.ISessionRepository#resetSessions
-     */
-    public synchronized void resetSessions(String game)
-    {
-        File file = new File(this.getFileNameForGame(game));
-        if (file.exists()) {
-            file.delete();
-        }
+			// Update
+			this.saveSessions(game, sessions);
+		}
+	}
 
-        GameLogger.debug(String.format("All sessions were reset."));
-    }
+	/**
+	 * @param sessions
+	 */
+	private synchronized boolean saveSessions(String game,
+			Set<SessionBean> sessions) {
+		boolean stored = false;
+		File file = new File(this.getFileNameForGame(game));
+		ObjectOutputStream out = null;
+		FileOutputStream fileOut = null;
+		try {
+			if (file.exists()) {
+				file.delete();
+			}
 
-    /**
-     * @return Retrieve all sessions stored in file.
-     */
-    private synchronized List<SessionBean> getSessions(String game)
-    {
-        List<SessionBean> sessions = null;
-        File file = new File(this.getFileNameForGame(game));
-        if (file.exists()) {
+			fileOut = new FileOutputStream(file);
+			out = new ObjectOutputStream(fileOut);
+			out.writeObject(sessions);
 
-            ObjectInputStream in = null;
-            FileInputStream fileIn = null;
-            try {
-                fileIn = new FileInputStream(file);
-                in = new ObjectInputStream(fileIn);
-                sessions = (List<SessionBean>) in.readObject();
-            } catch (Exception ex) {
-                GameLogger.error("Error retrieving sessions", ex);
-            } finally {
-                IOUtils.closeInputStream(in);
-                IOUtils.closeInputStream(fileIn);
-            }
+			stored = true;
+		} catch (IOException ex) {
+			LOG.error("Error storing sessions", ex);
+		} finally {
+			IOUtils.closeOutputStream(out);
+			IOUtils.closeOutputStream(fileOut);
+		}
 
-            this.updateExpiredSessions(game, sessions);
-        }
+		return stored;
+	}
 
-        return sessions;
-    }
-
-    /**
-     * Method to check and update expired sessions.
-     * 
-     * @param sessions
-     */
-    private void updateExpiredSessions(String game, List<SessionBean> sessions)
-    {
-        if (sessions != null) {
-            // Date comparison
-            Calendar calendar = new GregorianCalendar();
-            calendar.add(Calendar.HOUR, (-1) * this.hours);
-            Date now = calendar.getTime();
-
-            List<SessionBean> expired = new ArrayList<SessionBean>();
-
-            for (SessionBean session : sessions) {
-                if (session.getStartedAt() == null || session.getStartedAt().before(now)) {
-                    expired.add(session);
-                }
-            }
-
-            // Delete
-            for (SessionBean session : expired) {
-                sessions.remove(session);
-
-                GameLogger.debug(String.format("Session expired: %s.", session.toString()));
-            }
-
-            // Update
-            this.saveSessions(game, sessions);
-        }
-    }
-
-    /**
-     * @param sessions
-     */
-    private synchronized boolean saveSessions(String game, List<SessionBean> sessions)
-    {
-        boolean stored = false;
-        File file = new File(this.getFileNameForGame(game));
-        ObjectOutputStream out = null;
-        FileOutputStream fileOut = null;
-        try {
-            if (file.exists()) {
-                file.delete();
-            }
-
-            fileOut = new FileOutputStream(file);
-            out = new ObjectOutputStream(fileOut);
-            out.writeObject(sessions);
-
-            stored = true;
-        } catch (IOException ex) {
-            GameLogger.error("Error storing sessions", ex);
-        } finally {
-            IOUtils.closeOutputStream(out);
-            IOUtils.closeOutputStream(fileOut);
-        }
-
-        return stored;
-    }
-
-    /**
-     * Calculates the session file.
-     * 
-     * @param game
-     * @return
-     */
-    private String getFileNameForGame(String game)
-    {
-        return game + FILE_SESSION_FILE_EXTENSION;
-    }
+	/**
+	 * Calculates the session file.
+	 * 
+	 * @param game
+	 * @return
+	 */
+	private String getFileNameForGame(String game) {
+		return game + FILE_SESSION_FILE_EXTENSION;
+	}
 
 }

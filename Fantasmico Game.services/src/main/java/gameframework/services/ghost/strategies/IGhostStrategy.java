@@ -7,21 +7,20 @@ import java.util.List;
  * 
  * @author Jose Carvajal
  */
-public interface IGhostStrategy
-{
-    /**
-     * Checks whether the concrete strategy is linked with the specified level.
-     * 
-     * @param level
-     * @return
-     */
-    public abstract boolean isStrategyForLevel(Integer level);
+public interface IGhostStrategy {
+	/**
+	 * Checks whether the concrete strategy is linked with the specified level.
+	 * 
+	 * @param level
+	 * @return
+	 */
+	public abstract boolean isStrategyForLevel(Integer level);
 
-    /**
-     * Find a letter according to the strategy to continue playing.
-     * 
-     * @param string
-     * @return
-     */
-    public abstract String addLetter(List<String> choices, String currentString);
+	/**
+	 * Find a letter according to the strategy to continue playing.
+	 * 
+	 * @param string
+	 * @return
+	 */
+	public abstract String addLetter(List<String> choices, String currentString);
 }

@@ -9,119 +9,121 @@ import java.util.Map;
  * 
  * @author Jose Carvajal
  */
-public class SessionBean implements Serializable
-{
-    /**
-     * Serial version UID.
-     */
-    private static final long serialVersionUID = 1L;
+public class SessionBean implements Serializable {
 
-    private String token;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5436699561824398464L;
 
-    private String gameName;
+	private String token;
 
-    private Integer level;
+	private String gameName;
 
-    private String lang;
+	private Integer level;
 
-    private Map<String, String> properties;
+	private String lang;
 
-    private String winner;
+	private Map<String, String> properties;
 
-    private Date startedAt;
+	private String winner;
 
-    private boolean finished = false;
+	private Date startedAt;
 
-    public String getToken()
-    {
-        return token;
-    }
+	private boolean finished = false;
 
-    public void setToken(String token)
-    {
-        this.token = token;
-    }
+	public String getToken() {
+		return token;
+	}
 
-    public String getGameName()
-    {
-        return gameName;
-    }
+	public void setToken(String token) {
+		this.token = token;
+	}
 
-    public void setGameName(String gameName)
-    {
-        this.gameName = gameName;
-    }
+	public String getGameName() {
+		return gameName;
+	}
 
-    public Integer getLevel()
-    {
-        return level;
-    }
+	public void setGameName(String gameName) {
+		this.gameName = gameName;
+	}
 
-    public void setLevel(Integer level)
-    {
-        this.level = level;
-    }
+	public Integer getLevel() {
+		return level;
+	}
 
-    public String getLang()
-    {
-        return lang;
-    }
+	public void setLevel(Integer level) {
+		this.level = level;
+	}
 
-    public void setLang(String lang)
-    {
-        this.lang = lang;
-    }
+	public String getLang() {
+		return lang;
+	}
 
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
+	public void setLang(String lang) {
+		this.lang = lang;
+	}
 
-    public void setProperties(Map<String, String> properties)
-    {
-        this.properties = properties;
-    }
+	public Map<String, String> getProperties() {
+		return properties;
+	}
 
-    public Date getStartedAt()
-    {
-        return startedAt;
-    }
+	public void setProperties(Map<String, String> properties) {
+		this.properties = properties;
+	}
 
-    public void setStartedAt(Date startedAt)
-    {
-        this.startedAt = startedAt;
-    }
+	public Date getStartedAt() {
+		return startedAt;
+	}
 
-    public boolean isFinished()
-    {
-        return finished;
-    }
+	public void setStartedAt(Date startedAt) {
+		this.startedAt = startedAt;
+	}
 
-    public void setFinished(boolean finished)
-    {
-        this.finished = finished;
-    }
+	public boolean isFinished() {
+		return finished;
+	}
 
-    public String getWinner()
-    {
-        return winner;
-    }
+	public void setFinished(boolean finished) {
+		this.finished = finished;
+	}
 
-    public void setWinner(String winner)
-    {
-        this.winner = winner;
-    }
+	public String getWinner() {
+		return winner;
+	}
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString()
-    {
-        return String.format(
-            "[%s] for %s: Started at %s, Finished %s, Winner %s, level %s, lang %s and properties %s.", this.token,
-            this.gameName, this.startedAt, this.finished, this.winner, this.level, this.lang, this.properties);
-    }
+	public void setWinner(String winner) {
+		this.winner = winner;
+	}
+
+	@Override
+	public int hashCode() {
+		int hashCode = 17;
+		hashCode = 31 * hashCode + getGameName().hashCode();
+		hashCode = 31 * hashCode + getToken().hashCode();
+
+		return hashCode;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+
+		boolean equals = false;
+		if (obj instanceof SessionBean) {
+			SessionBean session = (SessionBean) obj;
+			equals = this.gameName.equals(session.getGameName())
+					&& this.token.equals(session.getToken());
+		}
+
+		return equals;
+	}
+
+	@Override
+	public String toString() {
+		return String
+				.format("[%s] for %s: Started at %s, Finished %s, Winner %s, level %s, lang %s and properties %s.",
+						this.token, this.gameName, this.startedAt,
+						this.finished, this.winner, this.level, this.lang,
+						this.properties);
+	}
 }

@@ -47,11 +47,11 @@
 			<img id="imgFantasmico" alt="Fantasmico" src="resources/images/phantom.png">
 		</div>
 		
-		<script type="text/javascript" src="resources/scripts/jquery-2.0.3.min.js"></script>
-		<script type="text/javascript" src="resources/scripts/knockout-2.3.0.js"></script>
-		<script type="text/javascript" src="resources/scripts/jquery-cookie.js"></script>
-		<script type="text/javascript" src="resources/scripts/css3-mediaqueries.js"></script>
-		<script type="text/javascript" src="resources/scripts/modernizr.js"></script>
+		<script type="text/javascript" src="resources/scripts/lib/jquery-2.0.3.min.js"></script>
+		<script type="text/javascript" src="resources/scripts/lib/knockout-2.3.0.js"></script>
+		<script type="text/javascript" src="resources/scripts/lib/jquery-cookie.js"></script>
+		<script type="text/javascript" src="resources/scripts/lib/css3-mediaqueries.js"></script>
+		<script type="text/javascript" src="resources/scripts/lib/modernizr.js"></script>
 		<script type="text/javascript" src="resources/scripts/WebAppEntities.js"></script>
 		<script type="text/javascript" src="resources/scripts/WebAppScripts.js"></script>
 	</body>

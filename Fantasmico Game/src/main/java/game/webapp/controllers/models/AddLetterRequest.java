@@ -2,37 +2,27 @@ package game.webapp.controllers.models;
 
 import java.io.Serializable;
 
-/**
- * @author Jose Carvajal
- */
-public class AddLetterRequest implements Serializable
-{
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 3196814320016906325L;
+public class AddLetterRequest implements Serializable {
 
-    private String token;
+	private static final long serialVersionUID = 3196814320016906325L;
 
-    private String letter;
+	private String token;
 
-    public String getToken()
-    {
-        return token;
-    }
+	private String letter;
 
-    public void setToken(String token)
-    {
-        this.token = token;
-    }
+	public String getToken() {
+		return token;
+	}
 
-    public String getLetter()
-    {
-        return letter;
-    }
+	public void setToken(String token) {
+		this.token = token;
+	}
 
-    public void setLetter(String letter)
-    {
-        this.letter = letter;
-    }
+	public String getLetter() {
+		return letter;
+	}
+
+	public void setLetter(String letter) {
+		this.letter = letter;
+	}
 }

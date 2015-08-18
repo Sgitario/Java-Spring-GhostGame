@@ -1,43 +1,44 @@
 package game.webapp.controllers.models;
 
-/**
- * @version $Id$
- */
-public class AddLetterResponse extends Response
-{
-    private String letter;
+public class AddLetterResponse {
+	private String letter;
 
-    private boolean finished;
+	private boolean finished;
 
-    private String winner;
+	private String winner;
 
-    public String getLetter()
-    {
-        return letter;
-    }
+	public AddLetterResponse() {
 
-    public void setLetter(String letter)
-    {
-        this.letter = letter;
-    }
+	}
 
-    public boolean isFinished()
-    {
-        return finished;
-    }
+	public AddLetterResponse(String answerLetter, boolean isFinished,
+			String winner) {
+		setLetter(answerLetter);
+		setFinished(isFinished);
+		setWinner(winner);
+	}
 
-    public void setFinished(boolean finished)
-    {
-        this.finished = finished;
-    }
+	public String getLetter() {
+		return letter;
+	}
 
-    public String getWinner()
-    {
-        return winner;
-    }
+	public void setLetter(String letter) {
+		this.letter = letter;
+	}
 
-    public void setWinner(String winner)
-    {
-        this.winner = winner;
-    }
+	public boolean isFinished() {
+		return finished;
+	}
+
+	public void setFinished(boolean finished) {
+		this.finished = finished;
+	}
+
+	public String getWinner() {
+		return winner;
+	}
+
+	public void setWinner(String winner) {
+		this.winner = winner;
+	}
 }

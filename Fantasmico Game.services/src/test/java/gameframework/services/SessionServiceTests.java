@@ -1,23 +1,15 @@
 package gameframework.services;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import gameframework.infrastructure.interfaces.ISessionRepository;
 import gameframework.transversal.models.SessionBean;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Appender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -26,158 +18,136 @@ import org.mockito.runners.MockitoJUnitRunner;
  * @version $Id$
  */
 @RunWith(MockitoJUnitRunner.class)
-public class SessionServiceTests
-{
-    @Mock
-    private ISessionRepository sessionRepository;
+public class SessionServiceTests {
+	@Mock
+	private ISessionRepository sessionRepository;
+	
+	private SessionService service;
+	private String game = "ghost";
+	private int level = 1;
+	private String lang = "es-ES";
+	private String string = "aah";
+	private String actualToken;
+	private boolean actualSessionUnregistered;
+	private SessionBean actualSession;
 
-    private Appender appenderMock;
+	@Before
+	public void setup() {
+		service = new SessionService(sessionRepository);
+	}
 
-    @Before
-    public void setup()
-    {
-        appenderMock = mock(Appender.class);
-        Logger.getRootLogger().addAppender(appenderMock);
-    }
+	@Test
+	public void registerSession_getTokenNotNull() {
+		// Arrange
+		givenStoreSessionResult(true);
 
-    @After
-    public void removeAppender()
-    {
-        Logger.getRootLogger().removeAppender(appenderMock);
-    }
+		// Act
+		whenRegisterSession();
 
-    @Test
-    public void registerSession_getTokenNotNull()
-    {
-        // Arrange
-        boolean expected = true;
-        String game = "ghost";
-        Integer level = 1;
-        String lang = "es-ES";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("string", "aah");
-        Mockito.when(sessionRepository.storeSession(Mockito.<SessionBean> any())).thenReturn(expected);
+		// Assert
+		thenTokenNotNull();
+	}
 
-        SessionService service = new SessionService(sessionRepository);
+	@Test
+	public void registerSession_getTokenNull() {
+		// Arrange
+		givenStoreSessionResult(false);
 
-        // Act
-        String token = service.registerSession(game, lang, level, properties);
+		// Act
+		whenRegisterSession();
 
-        // Assert
-        Assert.assertNotNull(token);
-    }
+		// Assert
+		thenTokenNull();
+	}
 
-    @Test
-    public void registerSession_getTokenNull()
-    {
-        // Arrange
-        boolean expected = false;
-        String game = "ghost";
-        Integer level = 1;
-        String lang = "es-ES";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("string", "aah");
-        Mockito.when(sessionRepository.storeSession(Mockito.<SessionBean> any())).thenReturn(expected);
+	@Test
+	public void getSession_getPropertiesNotNull() {
+		// Arrange
+		givenStoreSessionResult(true);
+		givenRegisteredSession();
 
-        SessionService service = new SessionService(sessionRepository);
+		// Act
+		whenGetSession();
 
-        // Act
-        String token = service.registerSession(game, lang, level, properties);
+		// Assert
+		thenSessionExpected();
+	}
 
-        ArgumentCaptor<LoggingEvent> arguments = ArgumentCaptor.forClass(LoggingEvent.class);
-        verify(appenderMock).doAppend(arguments.capture());
+	@Test
+	public void unregisterSession_returnsTrue() {
+		// Arrange
+		givenStoreSessionResult(true);
+		givenRegisteredSession();
+		givenDeleteSessionResult(true);
 
-        // Assert
-        Assert.assertNull(token);
-        org.junit.Assert.assertEquals(arguments.getValue().getLevel(), Level.WARN);
-    }
+		// Act
+		whenUnregisterSession();
 
-    @Test
-    public void getSession_getPropertiesNotNull()
-    {
-        // Arrange
-        boolean expected = true;
-        String game = "ghost";
-        Integer level = 1;
-        String lang = "es-ES";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("string", "aah");
+		// Assert
+		thenSessionIsUnregistered();
+	}
+	
+	/**
+	 * GIVENs
+	 */
+	
+	private void givenStoreSessionResult(boolean expected) {
+		Mockito.when(sessionRepository.storeSession(Mockito.<SessionBean> any()))
+				.thenReturn(expected);
+	}
+	
+	private void givenDeleteSessionResult(boolean expected) {
+		Mockito.when(sessionRepository.deleteSession(game, actualToken)).thenReturn(
+				expected);
+	}
+	
+	private void givenRegisteredSession() {
+		Map<String, String> properties = new HashMap<String, String>();
+		properties.put("string", string);
 
-        SessionBean session = new SessionBean();
-        session.setProperties(properties);
-
-        Mockito.when(sessionRepository.storeSession(Mockito.<SessionBean> any())).thenReturn(expected);
-
-        SessionService service = new SessionService(sessionRepository);
-        String token = service.registerSession(game, lang, level, properties);
-
-        Mockito.when(sessionRepository.retrieveSession(game, token)).thenReturn(session);
-
-        // Act
-        SessionBean actual = service.getSession(game, token);
-
-        // Assert
-        Assert.assertNotNull(token);
-        Assert.assertNotNull(actual);
-        Assert.assertEquals("aah", actual.getProperties().get("string"));
-    }
-
-    @Test
-    public void getSession_getPropertiesNull()
-    {
-        // Arrange
-        boolean expected = true;
-        String game = "ghost";
-        Integer level = 1;
-        String lang = "es-ES";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("string", "aah");
-
-        SessionBean session = new SessionBean();
-        session.setProperties(properties);
-
-        Mockito.when(sessionRepository.storeSession(Mockito.<SessionBean> any())).thenReturn(expected);
-
-        SessionService service = new SessionService(sessionRepository);
-        String token = service.registerSession(game, lang, level, properties);
-
-        Mockito.when(sessionRepository.retrieveSession(game, token)).thenReturn(session);
-
-        // Act
-        SessionBean actual = service.getSession(game, token + "NotExisting");
-
-        // Assert
-        Assert.assertNotNull(token);
-        Assert.assertNull(actual);
-    }
-
-    @Test
-    public void unregisterSession_returnsTrue()
-    {
-        // Arrange
-        boolean expected = true;
-        String game = "ghost";
-        Integer level = 1;
-        String lang = "es-ES";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("string", "aah");
-
-        SessionBean session = new SessionBean();
-        session.setProperties(properties);
-
-        Mockito.when(sessionRepository.storeSession(Mockito.<SessionBean> any())).thenReturn(expected);
-
-        SessionService service = new SessionService(sessionRepository);
-        String token = service.registerSession(game, lang, level, properties);
-
-        Mockito.when(sessionRepository.retrieveSession(game, token)).thenReturn(session);
-        Mockito.when(sessionRepository.deleteSession(game, token)).thenReturn(true);
-
-        // Act
-        boolean actual = service.unregisterSession(game, token);
-
-        // Assert
-        Assert.assertNotNull(token);
-        Assert.assertTrue(actual);
-    }
+		SessionBean session = new SessionBean();
+		session.setProperties(properties);
+		
+		whenRegisterSession();
+		Mockito.when(sessionRepository.retrieveSession(game, actualToken)).thenReturn(session);
+	}
+	
+	/**
+	 * WHENS
+	 */
+	
+	private void whenGetSession() {
+		actualSession = service.getSession(game, actualToken);
+	}
+	
+	private void whenRegisterSession() {
+		Map<String, String> properties = new HashMap<String, String>();
+		properties.put("string", string);
+		actualToken = service.registerSession(game, lang, level, properties);
+	}
+	
+	private void whenUnregisterSession() {
+		actualSessionUnregistered = service.unregisterSession(game, actualToken);
+	}
+	
+	/**
+	 * THENS
+	 */
+	
+	private void thenTokenNotNull() {
+		Assert.assertNotNull(actualToken);
+	}
+	
+	private void thenTokenNull() {
+		Assert.assertNull(actualToken);
+	}
+	
+	private void thenSessionExpected() {
+		Assert.assertNotNull(actualSession);
+		Assert.assertEquals(actualSession.getProperties().get("string"), string);
+	}
+	
+	private void thenSessionIsUnregistered() {
+		Assert.assertTrue(actualSessionUnregistered);
+	}
 }

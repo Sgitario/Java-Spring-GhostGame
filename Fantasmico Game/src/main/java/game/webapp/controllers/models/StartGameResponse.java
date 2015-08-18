@@ -1,16 +1,21 @@
 package game.webapp.controllers.models;
 
-public class StartGameResponse extends Response
-{
-    private String token;
+public class StartGameResponse {
+	private String token;
 
-    public String getToken()
-    {
-        return token;
-    }
+	public StartGameResponse() {
 
-    public void setToken(String token)
-    {
-        this.token = token;
-    }
+	}
+
+	public StartGameResponse(String token) {
+		setToken(token);
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
 }

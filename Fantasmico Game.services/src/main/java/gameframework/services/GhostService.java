@@ -3,11 +3,11 @@ package gameframework.services;
 import gameframework.services.ghost.providers.IDictionaryProvider;
 import gameframework.services.ghost.strategies.IGhostStrategy;
 import gameframework.services.interfaces.IGhostService;
-import gameframework.transversal.logging.GameLogger;
 import gameframework.transversal.models.SessionBean;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.perf4j.aop.Profiled;
 import org.springframework.stereotype.Service;
 
@@ -15,191 +15,200 @@ import org.springframework.stereotype.Service;
  * @author Jose Carvajal
  */
 @Service
-public class GhostService implements IGhostService
-{
-    private static final String STRING_KEY = "ghost_string";
+public class GhostService implements IGhostService {
+	private static final Logger LOG = Logger.getLogger(GhostService.class);
 
-    private static final String WINNER_COMPUTER = "computer";
+	private static final String STRING_KEY = "ghost_string";
 
-    private static final String WINNER_USER = "user";
+	private static final String WINNER_COMPUTER = "computer";
 
-    private List<IDictionaryProvider> dictionaries;
+	private static final String WINNER_USER = "user";
 
-    private List<IGhostStrategy> strategies;
+	private List<IDictionaryProvider> dictionaries;
 
-    /**
-     * Initialize a new instance of the GhostService class. This class is initialized in spring configuration.
-     * 
-     * @param dictionaries
-     * @param strategies
-     * @param minimalLetters Minimal letters to accomplish a final of game.
-     */
-    public GhostService(List<IDictionaryProvider> dictionaries, List<IGhostStrategy> strategies)
-    {
-        this.dictionaries = dictionaries;
-        this.strategies = strategies;
-    }
+	private List<IGhostStrategy> strategies;
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.services.interfaces.IGhostService#checkLetter(java.lang.String)
-     */
-    @Profiled
-    public boolean checkLetter(String letter, SessionBean session)
-    {
-        boolean isValid = false;
-        if (session != null) {
-            // Find language
-            IDictionaryProvider dict = this.findDictionary(session.getLang());
+	/**
+	 * Initialize a new instance of the GhostService class. This class is
+	 * initialized in spring configuration.
+	 * 
+	 * @param dictionaries
+	 * @param strategies
+	 * @param minimalLetters
+	 *            Minimal letters to accomplish a final of game.
+	 */
+	public GhostService(List<IDictionaryProvider> dictionaries,
+			List<IGhostStrategy> strategies) {
+		this.dictionaries = dictionaries;
+		this.strategies = strategies;
+	}
 
-            // Check whether letter is a character and exists in the dictionary.
-            isValid = dict != null && dict.checkLetter(letter);
-        }
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.services.interfaces.IGhostService#checkLetter(java.lang.String)
+	 */
+	@Profiled
+	public boolean checkLetter(String letter, SessionBean session) {
+		boolean isValid = false;
+		if (session != null) {
+			// Find language
+			IDictionaryProvider dict = this.findDictionary(session.getLang());
 
-        GameLogger.debug(String.format("GhostService.checkLetter with letter %s and result %s.", letter, isValid));
+			// Check whether letter is a character and exists in the dictionary.
+			isValid = dict != null && dict.checkLetter(letter);
+		}
 
-        return isValid;
-    }
+		LOG.debug(String.format(
+				"GhostService.checkLetter with letter %s and result %s.",
+				letter, isValid));
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.services.interfaces.IGhostService#addLetter(gameframework.infrastructure.entities.SessionBean)
-     */
-    @Profiled
-    public String addLetter(String addedLetter, SessionBean session)
-    {
-        String letter = null;
+		return isValid;
+	}
 
-        if (session != null) {
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.services.interfaces.IGhostService#addLetter(gameframework.infrastructure.entities.SessionBean)
+	 */
+	@Profiled
+	public String addLetter(String addedLetter, SessionBean session) {
+		String letter = null;
 
-            // Find language
-            IDictionaryProvider dict = this.findDictionary(session.getLang());
+		if (session != null) {
 
-            if (dict != null && dict.checkLetter(addedLetter)) {
-                // Compose current string
-                String previousString = "";
-                if (session.getProperties().containsKey(STRING_KEY)) {
-                    previousString = session.getProperties().get(STRING_KEY);
-                }
-                String currentString = previousString + addedLetter;
+			// Find language
+			IDictionaryProvider dict = this.findDictionary(session.getLang());
 
-                // Check whether current string is a word or there are no more choices. If not, game is over and
-                // computer wins.
-                List<String> choices = dict.listPossibleWords(currentString);
-                if (choices != null && choices.size() > 0) {
-                    // Let us play, find strategy
-                    IGhostStrategy strategy = this.findStrategy(session.getLevel());
-                    if (strategy != null) {
-                        letter = strategy.addLetter(choices, currentString);
+			if (dict != null && dict.checkLetter(addedLetter)) {
+				// Compose current string
+				String previousString = "";
+				if (session.getProperties().containsKey(STRING_KEY)) {
+					previousString = session.getProperties().get(STRING_KEY);
+				}
+				String currentString = previousString + addedLetter;
 
-                        // Update game
-                        String newString = currentString + letter;
-                        session.getProperties().remove(STRING_KEY);
-                        session.getProperties().put(STRING_KEY, newString);
+				// Check whether current string is a word or there are no more
+				// choices. If not, game is over and
+				// computer wins.
+				List<String> choices = dict.listPossibleWords(currentString);
+				if (choices != null && choices.size() > 0) {
+					// Let us play, find strategy
+					IGhostStrategy strategy = this.findStrategy(session
+							.getLevel());
+					if (strategy != null) {
+						letter = strategy.addLetter(choices, currentString);
 
-                        // Check again whether the new string is a word or there are no more choices. If so, game is
-                        // over and user wins.
-                        List<String> newChoices = dict.listPossibleWords(newString);
-                        if (newChoices == null || newChoices.size() == 0) {
-                            session.setFinished(true);
-                            session.setWinner(WINNER_USER);
-                        }
-                    } else {
-                        throw new IllegalArgumentException("Level invalid! Strategy not found!");
-                    }
-                } else {
-                    // Game finished.
-                    session.setFinished(true);
-                    session.setWinner(WINNER_COMPUTER);
-                }
-            } else {
-                throw new IllegalArgumentException("Dictionary not found or letter invalid");
-            }
-        }
+						// Update game
+						String newString = currentString + letter;
+						session.getProperties().remove(STRING_KEY);
+						session.getProperties().put(STRING_KEY, newString);
 
-        GameLogger.debug(String
-            .format("GhostService.addLetter with user letter %s and answer %s.", addedLetter, letter));
+						// Check again whether the new string is a word or there
+						// are no more choices. If so, game is
+						// over and user wins.
+						List<String> newChoices = dict
+								.listPossibleWords(newString);
+						if (newChoices == null || newChoices.size() == 0) {
+							session.setFinished(true);
+							session.setWinner(WINNER_USER);
+						}
+					} else {
+						throw new IllegalArgumentException(
+								"Level invalid! Strategy not found!");
+					}
+				} else {
+					// Game finished.
+					session.setFinished(true);
+					session.setWinner(WINNER_COMPUTER);
+				}
+			} else {
+				throw new IllegalArgumentException(
+						"Dictionary not found or letter invalid");
+			}
+		}
 
-        return letter;
-    }
+		LOG.debug(String.format(
+				"GhostService.addLetter with user letter %s and answer %s.",
+				addedLetter, letter));
 
-    /**
-     * {@inheritDoc}
-     * 
-     * @see gameframework.services.interfaces.IGhostService#getString(gameframework.transversal.models.SessionBean)
-     */
-    @Profiled
-    public String getString(SessionBean session)
-    {
-        String string = "";
-        if (session != null && session.getProperties().containsKey(STRING_KEY)) {
-            string = session.getProperties().get(STRING_KEY);
+		return letter;
+	}
 
-            GameLogger.debug(String.format("GhostService.getString for session %s is %s.", session.getToken(), string));
-        } else {
-            GameLogger.warn("GhostService.getString: Session is null!");
-        }
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * @see gameframework.services.interfaces.IGhostService#getString(gameframework.transversal.models.SessionBean)
+	 */
+	@Profiled
+	public String getString(SessionBean session) {
+		String string = "";
+		if (session != null && session.getProperties().containsKey(STRING_KEY)) {
+			string = session.getProperties().get(STRING_KEY);
 
-        return string;
-    }
+			LOG.debug(String.format(
+					"GhostService.getString for session %s is %s.",
+					session.getToken(), string));
+		} else {
+			LOG.warn("GhostService.getString: Session is null!");
+		}
 
-    /**
-     * Find the proper dictionary for the specified language.
-     * 
-     * @param lang
-     * @return
-     */
-    private IDictionaryProvider findDictionary(String lang)
-    {
-        IDictionaryProvider provider = null;
-        int index = 0;
-        boolean found = false;
+		return string;
+	}
 
-        while (index < this.dictionaries.size() && !found) {
-            IDictionaryProvider dict = this.dictionaries.get(index);
-            if (dict.isDictionaryForLang(lang)) {
-                provider = dict;
-                found = true;
-            }
+	/**
+	 * Find the proper dictionary for the specified language.
+	 * 
+	 * @param lang
+	 * @return
+	 */
+	private IDictionaryProvider findDictionary(String lang) {
+		IDictionaryProvider provider = null;
+		int index = 0;
+		boolean found = false;
 
-            index++;
-        }
+		while (index < this.dictionaries.size() && !found) {
+			IDictionaryProvider dict = this.dictionaries.get(index);
+			if (dict.isDictionaryForLang(lang)) {
+				provider = dict;
+				found = true;
+			}
 
-        if (!found) {
-            GameLogger.warn(String.format("Dictionary with lang %s not found!", lang));
-        }
+			index++;
+		}
 
-        return provider;
-    }
+		if (!found) {
+			LOG.warn(String.format("Dictionary with lang %s not found!", lang));
+		}
 
-    /**
-     * Find the proper strategy for the specified level.
-     * 
-     * @param lang
-     * @return
-     */
-    private IGhostStrategy findStrategy(Integer level)
-    {
-        IGhostStrategy strategy = null;
-        int index = 0;
-        boolean found = false;
+		return provider;
+	}
 
-        while (index < this.strategies.size() && !found) {
-            IGhostStrategy dict = this.strategies.get(index);
-            if (dict.isStrategyForLevel(level)) {
-                strategy = dict;
-                found = true;
-            }
+	/**
+	 * Find the proper strategy for the specified level.
+	 * 
+	 * @param lang
+	 * @return
+	 */
+	private IGhostStrategy findStrategy(Integer level) {
+		IGhostStrategy strategy = null;
+		int index = 0;
+		boolean found = false;
 
-            index++;
-        }
+		while (index < this.strategies.size() && !found) {
+			IGhostStrategy dict = this.strategies.get(index);
+			if (dict.isStrategyForLevel(level)) {
+				strategy = dict;
+				found = true;
+			}
 
-        if (!found) {
-            GameLogger.warn(String.format("Strategy with level %s not found!", level));
-        }
+			index++;
+		}
 
-        return strategy;
-    }
+		if (!found) {
+			LOG.warn(String.format("Strategy with level %s not found!", level));
+		}
+
+		return strategy;
+	}
 }

@@ -1,121 +1,130 @@
 package gameframework.services.ghost.strategies;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import org.apache.log4j.BasicConfigurator;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
  * @version $Id$
  */
-public class OptimalGhostStrategyTests
-{
+public class OptimalGhostStrategyTests {
 
-    @Before
-    public void setupLogging()
-    {
-        BasicConfigurator.configure();
-    }
+	private OptimalGhostStrategy strategy;
+	
+	private int level;
+	private String string;
+	private boolean actualIsStrategyForLevel;
+	private List<String> choices;
+	private String actualLetter;
+	
+	@Before
+	public void setup() {
+		strategy = new OptimalGhostStrategy();
+	}
 
-    @Test
-    public void isStrategyForLevel_returnsTrue()
-    {
-        // Arrange
-        Integer level = 1;
-        OptimalGhostStrategy strategy = new OptimalGhostStrategy();
+	@Test
+	public void isStrategyForLevel_returnsTrue() {
+		// Arrange
+		givenLevel(1);
 
-        // Act
-        boolean actual = strategy.isStrategyForLevel(level);
+		// Act
+		whenIsStrategyForLevel();
 
-        // Assert
-        org.junit.Assert.assertTrue(actual);
-    }
+		// Assert
+		thenIsStrategyForLevel(true);
+	}
 
-    @Test
-    public void isStrategyForLevel_returnsFalse()
-    {
-        // Arrange
-        Integer level = 2;
-        OptimalGhostStrategy strategy = new OptimalGhostStrategy();
+	@Test
+	public void isStrategyForLevel_returnsFalse() {
+		// Arrange
+		givenLevel(2);
 
-        // Act
-        boolean actual = strategy.isStrategyForLevel(level);
+		// Act
+		whenIsStrategyForLevel();
 
-        // Assert
-        org.junit.Assert.assertFalse(actual);
-    }
+		// Assert
+		thenIsStrategyForLevel(false);
+	}
 
-    @Test
-    public void isStrategyForLevel_returnsFalseWhenNull()
-    {
-        // Arrange
-        Integer level = null;
-        OptimalGhostStrategy strategy = new OptimalGhostStrategy();
+	@Test
+	public void addLetter_returnsWinningMovement() {
+		// Arrange
+		givenString("aah");
+		givenChoices("aahed", "aahing");
 
-        // Act
-        boolean actual = strategy.isStrategyForLevel(level);
+		// Act
+		whenAddLetter();
 
-        // Assert
-        org.junit.Assert.assertFalse(actual);
-    }
+		// Assert
+		thenExpectedLetter("e");
+	}
 
-    @Test
-    public void addLetter_returnsWinningMovement()
-    {
-        // Arrange
-        String expected = "e";
-        String currentString = "aah";
-        List<String> choices = new ArrayList<String>();
-        choices.add("aahed");
-        choices.add("aahing");
-        OptimalGhostStrategy strategy = new OptimalGhostStrategy();
+	@Test
+	public void addLetter_returnsWinningMovementOtherApproach() {
+		// Arrange
+		givenString("aah");
+		givenChoices("aahed", "aahedg", "aahing", "aahba", "aahbb");
 
-        // Act
-        String actual = strategy.addLetter(choices, currentString);
+		// Act
+		whenAddLetter();
 
-        // Assert
-        org.junit.Assert.assertEquals(expected, actual);
-    }
+		// Assert
+		thenExpectedLetter("b");
+	}
 
-    @Test
-    public void addLetter_returnsWinningMovementOtherApproach()
-    {
-        // Arrange
-        String expected = "b";
-        String currentString = "aah";
-        List<String> choices = new ArrayList<String>();
-        choices.add("aahed");
-        choices.add("aahedg");
-        choices.add("aahing");
-        choices.add("aahba");
-        choices.add("aahbb");
-        OptimalGhostStrategy strategy = new OptimalGhostStrategy();
+	@Test
+	public void addLetter_returnsLongestMovement() {
+		// Arrange
+		givenString("aah");
+		givenChoices("aahededd", "aahing");
 
-        // Act
-        String actual = strategy.addLetter(choices, currentString);
+		// Act
+		whenAddLetter();
 
-        // Assert
-        org.junit.Assert.assertEquals(expected, actual);
-    }
-
-    @Test
-    public void addLetter_returnsLongestMovement()
-    {
-        // Arrange
-        String expected = "e";
-        String currentString = "aah";
-        List<String> choices = new ArrayList<String>();
-        choices.add("aahededd");
-        choices.add("aahing");
-        OptimalGhostStrategy strategy = new OptimalGhostStrategy();
-
-        // Act
-        String actual = strategy.addLetter(choices, currentString);
-
-        // Assert
-        org.junit.Assert.assertEquals(expected, actual);
-    }
+		// Assert
+		thenExpectedLetter("e");
+	}
+	
+	/**
+	 * GIVENs
+	 */
+	
+	private void givenLevel(int level) {
+		this.level = level;
+	}
+	
+	private void givenString(String string) {
+		this.string = string;
+	}
+	
+	private void givenChoices(String... choices) {
+		this.choices = Arrays.asList(choices);
+	}
+	
+	/**
+	 * WHENs
+	 */
+	
+	private void whenIsStrategyForLevel() {
+		actualIsStrategyForLevel = strategy.isStrategyForLevel(level);
+	}
+	
+	private void whenAddLetter() {
+		actualLetter = strategy.addLetter(choices, string);
+	}
+	
+	/**
+	 * THENs
+	 */
+	
+	private void thenIsStrategyForLevel(boolean expected) {
+		org.junit.Assert.assertEquals(expected, actualIsStrategyForLevel);
+	}
+	
+	private void thenExpectedLetter(String letter) {
+		org.junit.Assert.assertEquals(letter, actualLetter);
+	}
 
 }

@@ -1,14 +1,18 @@
 package game.webapp.controllers;
 
-import game.webapp.controllers.errors.ErrorKeys;
+import game.webapp.controllers.errors.ErrorMessages;
 import game.webapp.controllers.models.AddLetterRequest;
 import game.webapp.controllers.models.AddLetterResponse;
+import game.webapp.controllers.models.EndGameRequest;
 import game.webapp.controllers.models.GetStringRequest;
 import game.webapp.controllers.models.GetStringResponse;
+import game.webapp.controllers.models.ErrorResponse;
+import game.webapp.controllers.models.StartGameRequest;
+import game.webapp.controllers.models.StartGameResponse;
 import gameframework.services.interfaces.IGhostService;
-import gameframework.transversal.logging.GameLogger;
 import gameframework.transversal.models.SessionBean;
 
+import org.apache.log4j.Logger;
 import org.perf4j.aop.Profiled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -20,116 +24,100 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
-public class GhostController extends BaseController
-{
-    private final static String GHOST_NAME = "ghost";
+public class GhostController extends BaseController {
+	private final static String GHOST_NAME = "ghost";
+	private static final Logger LOG = Logger.getLogger(GhostController.class);
 
-    @Autowired
-    private IGhostService ghostService;
+	@Autowired
+	private IGhostService ghostService;
 
-    /**
-     * @return Ghost service instance.
-     */
-    public IGhostService getGhostService()
-    {
-        return this.ghostService;
-    }
+	@RequestMapping("/")
+	public ModelAndView index() {
+		ModelAndView modelView = new ModelAndView("ghost");
 
-    /**
-     * Set ghost service instance.
-     * 
-     * @param ghostService
-     */
-    public void setGhostService(IGhostService ghostService)
-    {
-        this.ghostService = ghostService;
-    }
+		return modelView;
+	}
 
-    @RequestMapping("/")
-    public ModelAndView index()
-    {
-        ModelAndView modelView = new ModelAndView("ghost");
-        modelView.addObject("message", "Spring MVC Demo");
+	@Profiled
+	@ResponseBody
+	@RequestMapping(value = "/" + GHOST_NAME + "/startGame", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public StartGameResponse startGame(@RequestBody StartGameRequest request) {
+		return super.startGame(GHOST_NAME, request);
+	}
 
-        return modelView;
-    }
+	@Profiled
+	@ResponseBody
+	@RequestMapping(value = "/" + GHOST_NAME + "/endGame", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ErrorResponse endGame(@RequestBody EndGameRequest request) {
+		return super.endGame(GHOST_NAME, request.getToken());
+	}
 
-    @Profiled
-    @ResponseBody
-    @RequestMapping(value = "/ghost/addLetter", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public AddLetterResponse addLetter(@RequestBody AddLetterRequest request)
-    {
-        GameLogger.info(String.format("Request for ghost/addLetter with token %s and letter %s.", request.getToken(),
-            request.getLetter()));
+	@Profiled
+	@ResponseBody
+	@RequestMapping(value = "/ghost/addLetter", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public AddLetterResponse addLetter(@RequestBody AddLetterRequest request) {
+		LOG.info(String.format(
+				"Request for ghost/addLetter with token %s and letter %s.",
+				request.getToken(), request.getLetter()));
 
-        AddLetterResponse response = new AddLetterResponse();
+		// Get session.
+		SessionBean session = this.sessionService.getSession(GHOST_NAME,
+				request.getToken());
 
-        SessionBean session = this.sessionService.getSession(GHOST_NAME, request.getToken());
-        if (session != null) {
-            if (this.ghostService.checkLetter(request.getLetter(), session)) {
-                try {
-                    String letter = this.ghostService.addLetter(request.getLetter(), session);
+		validateSession(session);
+		validateLetter(request.getLetter(), session);
 
-                    response.setLetter(letter);
-                    response.setFinished(session.isFinished());
-                    if (!session.isFinished()) {
-                        this.sessionService.updateSession(session);
-                    } else {
-                        response.setWinner(session.getWinner());
+		// Get response from ghost service.
+		String answerLetter = this.ghostService.addLetter(request.getLetter(),
+				session);
 
-                        this.sessionService.unregisterSession(GHOST_NAME, request.getToken());
-                    }
-                } catch (IllegalArgumentException ex) {
-                    response.setErrorKey(ErrorKeys.ERROR_LANGUAGE_NOT_FOUND);
-                    response.setError("Language not found");
-                } catch (Exception ex) {
-                    response.setErrorKey(ErrorKeys.ERROR_SERVER);
-                    response.setError("Server unavailable");
-                    GameLogger.error("Unexpected error", ex);
-                }
-            } else {
-                response.setErrorKey(ErrorKeys.ERROR_LETTER_NOT_RECOGNISED);
-                response.setError("Invalid letter");
-            }
+		// Update properly the session.
+		if (!session.isFinished()) {
+			this.sessionService.updateSession(session);
+		} else {
+			endGame(GHOST_NAME, request.getToken());
+		}
 
-        } else {
-            response.setErrorKey(ErrorKeys.ERROR_SESSION_NOT_ACTIVE);
-            response.setError("Session not found");
-        }
+		LOG.info(String.format(
+				"Response for ghost/addLetter with letter %s, winner %s.",
+				answerLetter, session.getWinner()));
 
-        GameLogger.info(String.format("Response for ghost/addLetter with letter %s, result %s and error %s.",
-            response.getLetter(), response.getWinner(), response.getError()));
+		return new AddLetterResponse(answerLetter, session.isFinished(),
+				session.getWinner());
+	}
 
-        return response;
-    }
+	@Profiled
+	@ResponseBody
+	@RequestMapping(value = "/ghost/getString", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public GetStringResponse getString(@RequestBody GetStringRequest request) {
+		LOG.info(String.format("Request for ghost/getString with token %s.",
+				request.getToken()));
 
-    @Profiled
-    @ResponseBody
-    @RequestMapping(value = "/ghost/getString", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public GetStringResponse getString(@RequestBody GetStringRequest request)
-    {
-        GameLogger.info(String.format("Request for ghost/getString with token %s.", request.getToken()));
+		// Get session
+		SessionBean session = this.sessionService.getSession(GHOST_NAME,
+				request.getToken());
+		validateSession(session);
 
-        GetStringResponse response = new GetStringResponse();
+		// Get current string by session.
+		String currentString = this.ghostService.getString(session);
 
-        SessionBean session = this.sessionService.getSession(GHOST_NAME, request.getToken());
-        if (session != null) {
-            try {
-                response.setString(this.ghostService.getString(session));
+		LOG.info(String.format("Response for ghost/getString with result %s.",
+				currentString));
 
-            } catch (Exception ex) {
-                response.setErrorKey(ErrorKeys.ERROR_SERVER);
-                response.setError("Server unavailable");
-            }
+		return new GetStringResponse(currentString);
+	}
 
-        } else {
-            response.setErrorKey(ErrorKeys.ERROR_SESSION_NOT_ACTIVE);
-            response.setError("Session not found");
-        }
+	private void validateLetter(String letter, SessionBean session) {
+		if (!this.ghostService.checkLetter(letter, session)) {
+			throw new IllegalArgumentException(
+					ErrorMessages.ERROR_LETTER_NOT_RECOGNISED);
+		}
+	}
 
-        GameLogger.info(String.format("Response for ghost/getString with result %s and error %s.",
-            response.getString(), response.getError()));
-
-        return response;
-    }
+	private void validateSession(SessionBean session) {
+		if (session == null) {
+			throw new IllegalArgumentException(
+					ErrorMessages.ERROR_SESSION_NOT_ACTIVE);
+		}
+	}
 }

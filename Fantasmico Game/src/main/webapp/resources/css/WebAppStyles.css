@@ -4,6 +4,7 @@ html, body {
 	min-width: 200px;
 	min-height: 448px;
 	background: url(../images/background.jpg) no-repeat center center;
+	background-size: cover;
 }
 
 body > header {

@@ -1,80 +1,90 @@
 package game.webapp.controllers;
 
-import game.webapp.controllers.models.EndGameRequest;
-import game.webapp.controllers.models.Response;
+import game.webapp.controllers.models.ErrorResponse;
 import game.webapp.controllers.models.StartGameRequest;
 import game.webapp.controllers.models.StartGameResponse;
 import gameframework.services.interfaces.ISessionService;
-import gameframework.transversal.logging.GameLogger;
 
 import java.util.HashMap;
 
-import org.perf4j.aop.Profiled;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-public class BaseController
-{
-    @Autowired
-    protected ISessionService sessionService;
+/**
+ * Base Controller enables: - Start and end games with session tokens.
+ * - Error handling.
+ * 
+ * @author jhilario
+ *
+ */
+public abstract class BaseController {
 
-    /**
-     * @return Session service instance.
-     */
-    public ISessionService getSessionService()
-    {
-        return this.sessionService;
-    }
+	private static final Logger LOG = Logger.getLogger(BaseController.class);
 
-    /**
-     * Set the session service instance.
-     * 
-     * @param sessionService
-     */
-    public void setSessionService(ISessionService sessionService)
-    {
-        this.sessionService = sessionService;
-    }
+	@Autowired
+	protected ISessionService sessionService;
 
-    @Profiled
-    @ResponseBody
-    @RequestMapping(value = "/{game}/startGame", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public StartGameResponse startGame(@PathVariable String game, @RequestBody StartGameRequest request)
-    {
-        GameLogger.info(String.format("Request for %s/startGame with lang %s and level %s.", game, request.getLang(),
-            request.getLevel()));
+	/**
+	 * Start game request handler by registering the
+	 * session to generate a new token.
+	 * 
+	 * @param game
+	 * @param request
+	 * @return
+	 */
+	protected StartGameResponse startGame(String game, StartGameRequest request) {
+		LOG.info(String.format(
+				"Request for %s/startGame with lang %s and level %s.", game,
+				request.getLang(), request.getLevel()));
 
-        StartGameResponse response = new StartGameResponse();
+		String token = this.sessionService.registerSession(game,
+				request.getLang(), request.getLevel(),
+				new HashMap<String, String>());
 
-        String token =
-            this.sessionService.registerSession(game, request.getLang(), Integer.valueOf(request.getLevel()),
-                new HashMap<String, String>());
+		LOG.info(String.format("Response for %s/startGame with token %s.",
+				game, token));
 
-        response.setToken(token);
+		return new StartGameResponse(token);
+	}
 
-        GameLogger.info(String.format("Response for %s/startGame with token %s.", game, response.getToken()));
+	/**
+	 * End the game by unregistering the session.
+	 * 
+	 * @param game
+	 * @param request
+	 * @return
+	 */
+	protected ErrorResponse endGame(String game, String token) {
+		LOG.info(String.format("Request for %s/endGame with token %s.", game,
+				token));
 
-        return response;
-    }
+		boolean result = this.sessionService.unregisterSession(game,
+				token);
 
-    @Profiled
-    @ResponseBody
-    @RequestMapping(value = "/{game}/endGame", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Response endGame(@PathVariable String game, @RequestBody EndGameRequest request)
-    {
-        GameLogger.info(String.format("Request for %s/endGame with token %s.", game, request.getToken()));
+		LOG.info(String.format("Response for %s/endGame with result %s.", game,
+				result));
+		
+		return new ErrorResponse();
+	}
 
-        Response response = new Response();
+	/**
+	 * Exception handler to parse the error into the proper response instance.
+	 * @param req
+	 * @param exception
+	 * @return
+	 */
+	@ExceptionHandler(Exception.class)
+	public @ResponseBody ErrorResponse handleError(HttpServletRequest req,
+			Exception exception) {
+		LOG.error("Request: " + req.getRequestURL() + " raised " + exception,
+				exception);
 
-        boolean result = this.sessionService.unregisterSession(game, request.getToken());
-
-        GameLogger.info(String.format("Response for %s/endGame with result %s.", game, result));
-
-        return response;
-    }
+		ErrorResponse response = new ErrorResponse();
+		response.setError(exception.getMessage());
+		return response;
+	}
 }

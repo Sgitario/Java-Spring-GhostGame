@@ -1,15 +1,18 @@
 package gameframework.services;
 
+import static org.mockito.Mockito.*;
 import gameframework.services.ghost.providers.IDictionaryProvider;
 import gameframework.services.ghost.strategies.IGhostStrategy;
 import gameframework.transversal.models.SessionBean;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -20,257 +23,245 @@ import org.mockito.runners.MockitoJUnitRunner;
  * @version $Id$
  */
 @RunWith(MockitoJUnitRunner.class)
-public class GhostServiceTests
-{
-    @Mock
-    private IDictionaryProvider dictionaryProvider;
+public class GhostServiceTests {
+	@Mock
+	private IDictionaryProvider dictionaryProvider;
 
-    @Mock
-    private IGhostStrategy ghostStrategy;
+	@Mock
+	private IGhostStrategy ghostStrategy;
+	
+	private GhostService service;
+	private SessionBean session;
+	private int level;
+	private String lang;
+	private String userLetter;
+	private String computerLetter;
+	private String currentString;
+	private String actualString;
+	private boolean actualUserLetterChecked;
+	
+	@Before
+	public void setup() {		
+		service = new GhostService(Arrays.asList(dictionaryProvider), 
+				Arrays.asList(ghostStrategy));
+	}
 
-    @Test
-    public void addLetter_returnsFalseWhenNoMoreChoicesWereFound()
-    {
-        // Arranges
-        String newLetter = "h";
-        String string = "aa";
-        String lang = "en-ES";
-        Integer level = 1;
-        String game = "ghost";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("ghost_string", string);
-        SessionBean session = new SessionBean();
-        session.setGameName(game);
-        session.setLevel(level);
-        session.setLang(lang);
-        session.setProperties(properties);
+	@Test
+	public void addLetter_returnsFalseWhenNoMoreChoicesWereFound() {
+		// Arranges
+		givenAValidLang("en-ES");
+		givenAValidLevel(1);
+		givenValidUserLetter("h");
+		givenCurrentString("aa");
+		givenSessionBean();
+		
+		givenNoMorePossibleWords();
 
-        Mockito.when(dictionaryProvider.checkLetter(newLetter)).thenReturn(true);
-        Mockito.when(dictionaryProvider.isDictionaryForLang(lang)).thenReturn(true);
-        Mockito.when(dictionaryProvider.listPossibleWords(string + newLetter)).thenReturn(new ArrayList<String>());
-        Mockito.when(ghostStrategy.isStrategyForLevel(level)).thenReturn(true);
+		// Acts
+		whenAddTheUserLetter();
 
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
+		// Asserts
+		thenSessionIsFinished();
+	}
 
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
+	@Test
+	public void addLetter_returnsTrueWhenChoicesWereFound() {
+		// Arranges
+		givenAValidLang("en-ES");
+		givenAValidLevel(1);
+		givenValidUserLetter("h");
+		givenCurrentString("aa");
+		givenSessionBean();
+		
+		givenMorePossibleWords(Arrays.asList("aahja"));
+		givenStrategyReturns("j");
 
-        GhostService service = new GhostService(dictionaries, strategies);
+		// Acts
+		whenAddTheUserLetter();
 
-        // Acts
-        String actual = service.addLetter(newLetter, session);
+		// Asserts
+		thenComputerWordIs("j");
+	}
 
-        // Asserts
-        Assert.assertNull(actual);
-        Assert.assertTrue(session.isFinished());
-    }
+	@Test
+	public void addLetter_returnsFinishedWinnerComputer() {
+		// Arranges
+		givenAValidLang("en-ES");
+		givenAValidLevel(1);
+		givenValidUserLetter("a");
+		givenCurrentString("a");
+		givenSessionBean();
+		
+		givenNoMorePossibleWords();
 
-    @Test
-    public void addLetter_returnsTrueWhenChoicesWereFound()
-    {
-        // Arranges
-        String newLetter = "h";
-        String expectedLetter = "j";
-        String string = "aa";
-        String lang = "en-ES";
-        Integer level = 1;
-        String game = "ghost";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("ghost_string", string);
-        SessionBean session = new SessionBean();
-        session.setGameName(game);
-        session.setLevel(level);
-        session.setLang(lang);
-        session.setProperties(properties);
+		// Acts
+		whenAddTheUserLetter();
 
-        List<String> choices = new ArrayList<String>();
-        choices.add("aahja");
+		// Asserts
+		thenComputerWins();
+	}
 
-        Mockito.when(dictionaryProvider.checkLetter(newLetter)).thenReturn(true);
-        Mockito.when(dictionaryProvider.isDictionaryForLang(lang)).thenReturn(true);
-        Mockito.when(dictionaryProvider.listPossibleWords(string + newLetter)).thenReturn(choices);
-        Mockito.when(dictionaryProvider.listPossibleWords(string + newLetter + expectedLetter)).thenReturn(choices);
-        Mockito.when(ghostStrategy.isStrategyForLevel(level)).thenReturn(true);
-        Mockito.when(ghostStrategy.addLetter(choices, string + newLetter)).thenReturn(expectedLetter);
+	@Test
+	public void addLetter_returnsFinishedWinnerUser() {
+		// Arranges
+		givenAValidLang("en-ES");
+		givenAValidLevel(1);
+		givenValidUserLetter("n");
+		givenCurrentString("aahi");
+		givenSessionBean();
+		
+		givenMorePossibleWords(Arrays.asList("aahing"));
+		givenStrategyLetterResponseFor("aahig", "g");
 
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
+		// Acts
+		whenAddTheUserLetter();
 
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
+		// Asserts
+		thenUserWins();
+	}
 
-        GhostService service = new GhostService(dictionaries, strategies);
+	@Test
+	public void getString_returnsEmptyWhenStringDoesNotExist() {
+		// Arranges
+		givenSessionBean();
 
-        // Acts
-        String actual = service.addLetter(newLetter, session);
+		// Acts
+		whenGetString();
 
-        // Asserts
-        Assert.assertNotNull(actual);
-        Assert.assertFalse(session.isFinished());
-        Assert.assertEquals(expectedLetter, actual);
-    }
+		// Asserts
+		thenActualStringEmpty();
+	}
 
-    @Test
-    public void addLetter_returnsFinishedWinnerComputer()
-    {
-        // Arranges
-        String winnerExpected = "computer";
-        String newLetter = "a";
-        String string = "a";
-        String lang = "en-ES";
-        Integer level = 1;
-        String game = "ghost";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("ghost_string", string);
-        SessionBean session = new SessionBean();
-        session.setGameName(game);
-        session.setLevel(level);
-        session.setLang(lang);
-        session.setProperties(properties);
+	@Test
+	public void getString_returnsExpectedString() {
+		// Arranges
+		givenCurrentString("aa");
+		givenSessionBean();
 
-        List<String> choices = new ArrayList<String>();
+		// Acts
+		whenGetString();
 
-        Mockito.when(dictionaryProvider.checkLetter(newLetter)).thenReturn(true);
-        Mockito.when(dictionaryProvider.isDictionaryForLang(lang)).thenReturn(true);
-        Mockito.when(dictionaryProvider.listPossibleWords(string + newLetter)).thenReturn(choices);
+		// Asserts
+		thenActualStringEquals("aa");
+	}
 
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
+	@Test
+	public void checkLetter_returnsTrue() {
+		// Arranges
+		givenAValidLang("en-ES");
+		givenValidUserLetter("n");
+		givenSessionBean();
 
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
+		// Acts
+		whenCheckUserLetter();
 
-        GhostService service = new GhostService(dictionaries, strategies);
-
-        // Acts
-        String actual = service.addLetter(newLetter, session);
-
-        // Asserts
-        Assert.assertNull(actual);
-        Assert.assertTrue(session.isFinished());
-        Assert.assertEquals(session.getWinner(), winnerExpected);
-    }
-
-    @Test
-    public void addLetter_returnsFinishedWinnerUser()
-    {
-        // Arranges
-        String winnerExpected = "user";
-        String expectedLetter = "g";
-        String newLetter = "n";
-        String string = "aahi";
-        String lang = "en-ES";
-        Integer level = 1;
-        String game = "ghost";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("ghost_string", string);
-        SessionBean session = new SessionBean();
-        session.setGameName(game);
-        session.setLevel(level);
-        session.setLang(lang);
-        session.setProperties(properties);
-
-        List<String> choices = new ArrayList<String>();
-        choices.add("aahing");
-
-        Mockito.when(dictionaryProvider.checkLetter(newLetter)).thenReturn(true);
-        Mockito.when(dictionaryProvider.isDictionaryForLang(lang)).thenReturn(true);
-        Mockito.when(dictionaryProvider.listPossibleWords(string + newLetter)).thenReturn(choices);
-        Mockito.when(ghostStrategy.isStrategyForLevel(level)).thenReturn(true);
-        Mockito.when(ghostStrategy.addLetter(choices, string + newLetter)).thenReturn(expectedLetter);
-
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
-
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
-
-        GhostService service = new GhostService(dictionaries, strategies);
-
-        // Acts
-        String actual = service.addLetter(newLetter, session);
-
-        // Asserts
-        Assert.assertNotNull(actual);
-        Assert.assertTrue(session.isFinished());
-        Assert.assertEquals(expectedLetter, actual);
-        Assert.assertEquals(session.getWinner(), winnerExpected);
-    }
-
-    @Test
-    public void getString_returnsEmptyWhenStringDoesNotExist()
-    {
-        // Arranges
-        Map<String, String> properties = new HashMap<String, String>();
-        SessionBean session = new SessionBean();
-        session.setProperties(properties);
-
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
-
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
-
-        GhostService service = new GhostService(dictionaries, strategies);
-
-        // Acts
-        String actual = service.getString(session);
-
-        // Asserts
-        Assert.assertNotNull(actual);
-        Assert.assertEquals("", actual);
-    }
-
-    @Test
-    public void getString_returnsExpectedString()
-    {
-        // Arranges
-        String string = "aa";
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put("ghost_string", string);
-        SessionBean session = new SessionBean();
-        session.setProperties(properties);
-
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
-
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
-
-        GhostService service = new GhostService(dictionaries, strategies);
-
-        // Acts
-        String actual = service.getString(session);
-
-        // Asserts
-        Assert.assertNotNull(actual);
-        Assert.assertEquals(string, actual);
-    }
-
-    @Test
-    public void checkLetter_returnsTrue()
-    {
-        // Arranges
-        String newLetter = "n";
-        String lang = "en-ES";
-        SessionBean session = new SessionBean();
-        session.setLang(lang);
-
-        Mockito.when(dictionaryProvider.isDictionaryForLang(lang)).thenReturn(true);
-        Mockito.when(dictionaryProvider.checkLetter(newLetter)).thenReturn(true);
-        List<IDictionaryProvider> dictionaries = new ArrayList<IDictionaryProvider>();
-        dictionaries.add(dictionaryProvider);
-
-        List<IGhostStrategy> strategies = new ArrayList<IGhostStrategy>();
-        strategies.add(ghostStrategy);
-
-        GhostService service = new GhostService(dictionaries, strategies);
-
-        // Acts
-        boolean actual = service.checkLetter(newLetter, session);
-
-        // Asserts
-        Assert.assertTrue(actual);
-    }
+		// Asserts
+		thenUserLetterCheckedTrue();
+	}
+	
+	/**
+	 * GIVENS
+	 */
+	private void givenAValidLevel(int level) {
+		this.level = level;
+		
+		Mockito.when(ghostStrategy.isStrategyForLevel(level)).thenReturn(true);
+	}
+	
+	private void givenAValidLang(String lang) {
+		this.lang = lang;
+		Mockito.when(dictionaryProvider.isDictionaryForLang(lang)).thenReturn(
+				true);
+	}
+	
+	private void givenValidUserLetter(String userLetter) {
+		this.userLetter = userLetter;
+		
+		Mockito.when(dictionaryProvider.checkLetter(this.userLetter)).thenReturn(true);
+	}
+	
+	private void givenCurrentString(String currentString) {
+		this.currentString = currentString;
+	}
+	
+	private void givenSessionBean() {
+		String game = "ghost";
+		Map<String, String> properties = new HashMap<String, String>();
+		if (currentString != null) {
+			properties.put("ghost_string", currentString);
+		}
+		
+		session = new SessionBean();
+		session.setGameName(game);
+		session.setLevel(level);
+		session.setLang(lang);
+		session.setProperties(properties);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void givenStrategyLetterResponseFor(String string, String letter) {
+		Mockito.when(ghostStrategy.addLetter(any(List.class), eq(string))).thenReturn(letter);
+	}
+	
+	private void givenMorePossibleWords(List<String> nextWords) {
+		Mockito.when(dictionaryProvider.listPossibleWords(currentString + userLetter)).thenReturn(nextWords);
+	}
+	
+	private void givenNoMorePossibleWords() {
+		Mockito.when(dictionaryProvider.listPossibleWords(currentString + userLetter)).thenReturn(new ArrayList<String>());
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void givenStrategyReturns(String letter) {
+		Mockito.when(ghostStrategy.addLetter(any(List.class), any(String.class))).thenReturn(letter);
+	}
+	
+	/**
+	 * WHENS
+	 */
+	private void whenAddTheUserLetter() {
+		computerLetter = service.addLetter(userLetter, session);
+	}
+	
+	private void whenGetString() {
+		actualString = service.getString(session);
+	}
+	
+	private void whenCheckUserLetter() {
+		actualUserLetterChecked = service.checkLetter(userLetter, session);
+	}
+	
+	/**
+	 * THENS
+	 */
+	private void thenSessionIsFinished() {
+		Assert.assertNull(computerLetter);
+		Assert.assertTrue(session.isFinished());
+	}
+	
+	private void thenComputerWordIs(String computerLetter) {
+		Assert.assertEquals(computerLetter, this.computerLetter);
+	}
+	
+	private void thenComputerWins() {
+		thenSessionIsFinished();
+		Assert.assertEquals("computer", session.getWinner());
+	}
+	
+	private void thenUserWins() {
+		thenSessionIsFinished();
+		Assert.assertEquals("user", session.getWinner());
+	}
+	
+	private void thenActualStringEmpty() {
+		Assert.assertEquals("", actualString);
+	}
+	
+	private void thenActualStringEquals(String expected) {
+		Assert.assertEquals(expected, actualString);
+	}
+	
+	private void thenUserLetterCheckedTrue() {
+		Assert.assertTrue(actualUserLetterChecked);
+	}
 }
